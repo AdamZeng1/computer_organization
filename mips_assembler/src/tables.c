@@ -9,6 +9,9 @@
 const int SYMTBL_NON_UNIQUE = 0;
 const int SYMTBL_UNIQUE_NAME = 1;
 
+#define INITIAL_CAPACITY 5
+#define SCALING_FACTOR 2
+
 /*******************************
  * Helper Functions
  *******************************/
@@ -19,7 +22,7 @@ void allocation_failed() {
 }
 
 void addr_alignment_incorrect() {
-    write_to_log("Error: address is not a multiple of 4.\n");
+   write_to_log("Error: address is not a multiple of 4.\n");
 }
 
 void name_already_exists(const char* name) {
@@ -42,12 +45,29 @@ void write_symbol(FILE* output, uint32_t addr, const char* name) {
  */
 SymbolTable* create_table(int mode) {
     /* YOUR CODE HERE */
-    return NULL;
+    SymbolTable *symbol_table = (SymbolTable *)malloc(sizeof(SymbolTable));
+    if (!symbol_table) 
+        allocation_failed();
+    Symbol *symbol = (Symbol *)malloc(INITIAL_CAPACITY * sizeof(Symbol));
+    if (!symbol)
+        allocation_failed();
+    // symbol_table->tbl = NULL;
+    // symbol_table->len = 0;
+    // symbol_table->cap = INITIAL_CAPACITY;
+    // symbol_table->mode = mode;
+    *symbol_table = (SymbolTable) {symbol, 0, INITIAL_CAPACITY, mode};
+    return symbol_table;
 }
 
 /* Frees the given SymbolTable and all associated memory. */
 void free_table(SymbolTable* table) {
     /* YOUR CODE HERE */
+    int i;
+    for (i = 0; i < table->len; i++) {
+        free((table->tbl[i]).name);
+    }
+    free(table->tbl);
+    free(table);
 }
 
 /* Adds a new symbol and its address to the SymbolTable pointed to by TABLE. 
@@ -66,15 +86,55 @@ void free_table(SymbolTable* table) {
  */
 int add_to_table(SymbolTable* table, const char* name, uint32_t addr) {
     /* YOUR CODE HERE */
-    return -1;
+    if (table->mode == SYMTBL_UNIQUE_NAME) {
+        Symbol *symbol = table->tbl;
+        int i;
+        for (i = 0; i < table->len; i++) {
+            if (strcmp(symbol->name, name) == 0) { 
+                name_already_exists(name);
+                return -1;
+            }
+            symbol++;
+        }
+    }
+    if (addr % 4 != 0) {
+        addr_alignment_incorrect();
+        return -1;
+    }
+    if (table->len == table->cap) {
+        table->cap *= SCALING_FACTOR;
+        table->tbl = (Symbol *)realloc(table->tbl, table->cap * sizeof(Symbol));
+        if (table->tbl == NULL) 
+            allocation_failed();
+    }
+    Symbol *sym_added = &(table->tbl[table->len]);
+    sym_added->name = (char *)malloc((strlen(name)+1) * sizeof(char));
+    if (sym_added->name == NULL)
+        allocation_failed();
+    strcpy(sym_added->name, name);
+    sym_added->addr = addr;
+    table->len += 1;
+    return 0;
 }
+
+
 
 /* Returns the address (byte offset) of the given symbol. If a symbol with name
    NAME is not present in TABLE, return -1.
  */
 int64_t get_addr_for_symbol(SymbolTable* table, const char* name) {
     /* YOUR CODE HERE */
-    return -1;   
+    int i;
+    Symbol *symbol_searched = NULL;
+    for (i = 0; i < table->len; i++) {
+        if (strcmp((table->tbl[i]).name, name) == 0) {
+            symbol_searched = &(table->tbl[i]);
+            break;
+        }
+    }
+    if (symbol_searched == NULL)
+        return -1;
+    return symbol_searched->addr;
 }
 
 /* Writes the SymbolTable TABLE to OUTPUT. You should use write_symbol() to
@@ -82,4 +142,10 @@ int64_t get_addr_for_symbol(SymbolTable* table, const char* name) {
  */
 void write_table(SymbolTable* table, FILE* output) {
     /* YOUR CODE HERE */
+    int i;
+    Symbol *symbol = table->tbl;
+    for (i = 0; i < table->len; i++) {
+        write_symbol(output, symbol->addr, symbol->name);
+        symbol++;
+    }
 }

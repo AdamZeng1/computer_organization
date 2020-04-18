@@ -91,7 +91,7 @@ void test_translate_num() {
 
 void test_table_1() {
     int retval;
-
+    
     SymbolTable* tbl = create_table(SYMTBL_UNIQUE_NAME);
     CU_ASSERT_PTR_NOT_NULL(tbl);
 
@@ -105,14 +105,13 @@ void test_table_1() {
     CU_ASSERT_EQUAL(retval, -1); 
     retval = add_to_table(tbl, "bob", 14); 
     CU_ASSERT_EQUAL(retval, -1); 
-
+    
     retval = get_addr_for_symbol(tbl, "abc");
     CU_ASSERT_EQUAL(retval, 8); 
     retval = get_addr_for_symbol(tbl, "q45");
     CU_ASSERT_EQUAL(retval, 16); 
     retval = get_addr_for_symbol(tbl, "ef");
     CU_ASSERT_EQUAL(retval, -1);
-    
     free_table(tbl);
 
     char* arr[] = { "Error: name 'q45' already exists in table.",

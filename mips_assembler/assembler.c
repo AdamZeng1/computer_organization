@@ -121,6 +121,45 @@ static int add_if_label(uint32_t input_line, char* str, uint32_t byte_offset,
  */
 int pass_one(FILE* input, FILE* output, SymbolTable* symtbl) {
     /* YOUR CODE HERE */
+    char buf[BUF_SIZE], *args[MAX_ARGS];
+    int line_num = 0, byte_offset = 0, err_code = 0, extra_arg_err = 0;;
+    while (fgets(buf, BUF_SIZE, input)) {
+        line_num += 1;
+        skip_comment(buf);
+        char *token = strtok(buf, IGNORE_CHARS);
+        if (token) {
+            char *inst_name = NULL;
+            /*  if not a label, treat it as the name of an instruction  */
+            if (add_if_label(line_num, token, byte_offset, symtbl) == 0) {  
+                inst_name = token;
+            } else {
+                inst_name = strtok(NULL, IGNORE_CHARS);
+            }
+            if (inst_name) {
+                int num_args = 0;
+                while ((token = strtok(NULL, IGNORE_CHARS))) {
+                    if (num_args == MAX_ARGS) {
+                        raise_extra_arg_error(line_num, token);
+                        extra_arg_err = -1;
+                        break;
+                    }
+                    args[num_args++] = token;   // extra arguments will be ignored
+                }
+                int num_new_line ;
+                if (extra_arg_err == 0) {   // if no extra_arg_err
+                    /* NOTE: if a pseudoinstruction comes, more than one line may be written!!
+                       and consequently the byte_offset should increase by more than 4!!!
+                     */
+                    if ((num_new_line =  write_pass_one(output, inst_name, args, num_args)) == 0) {
+                        err_code = -1;
+                        raise_inst_error(line_num, inst_name, args, num_args);
+                    }
+                }
+                byte_offset += 4 * num_new_line ;
+            }
+        }  
+    }
+    if (err_code >= 0 && extra_arg_err >= 0) return 0;
     return -1;
 }
 
@@ -135,28 +174,42 @@ int pass_one(FILE* input, FILE* output, SymbolTable* symtbl) {
    the document, and at the end, return -1. Return 0 if no errors were encountered. */
 int pass_two(FILE *input, FILE* output, SymbolTable* symtbl, SymbolTable* reltbl) {
     /* YOUR CODE HERE */
-
+    char *inst_name;
+    char *args[MAX_ARGS];
+    int err_code = 0;
     // Since we pass this buffer to strtok(), the chars here will GET CLOBBERED.
     char buf[BUF_SIZE];
     // Store input line number / byte offset below. When should each be incremented?
-
+    int line_num = 0, byte_offset = 0;
     // First, read the next line into a buffer.
-
-    // Next, use strtok() to scan for next character. If there's nothing,
-    // go to the next line.
-
-    // Parse for instruction arguments. You should use strtok() to tokenize
-    // the rest of the line. Extra arguments should be filtered out in pass_one(),
-    // so you don't need to worry about that here.
-    char* args[MAX_ARGS];
-    int num_args = 0;
-
-    // Use translate_inst() to translate the instruction and write to output file.
-    // If an error occurs, the instruction will not be written and you should call
-    // raise_inst_error(). 
-
+    while (fgets(buf, BUF_SIZE, input)) {
+        line_num += 1;
+        // Next, use strtok() to scan for next character. If there's nothing,
+        // go to the next line.
+        char *token = strtok(buf, IGNORE_CHARS);
+        if (token) {
+            inst_name = token;
+            int num_args = 0;
+            // Parse for instruction arguments. You should use strtok() to tokenize
+            // the rest of the line. Extra arguments should be filtered out in pass_one(),
+            // so you don't need to worry about that here.
+            while ((token = strtok(NULL, IGNORE_CHARS))) {
+                args[num_args++] = token;
+            }
+            // printf("\t%d\n", byte_offset/4);
+            
+            // Use translate_inst() to translate the instruction and write to output file.
+            // If an error occurs, the instruction will not be written and you should call
+            // raise_inst_error(). 
+            if (translate_inst(output, inst_name, args, num_args, byte_offset, symtbl, reltbl) == -1) {
+                err_code = -1;
+                raise_inst_error(line_num, inst_name, args, num_args);
+            }
+            byte_offset += 4;
+        }
+    }
     // Repeat until no more characters are left, and the return the correct return val
-
+    if (err_code >= 0) return 0;
     return -1;
 }
 
