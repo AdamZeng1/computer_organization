@@ -317,12 +317,12 @@ int write_branch(uint8_t opcode, FILE* output, char** args, size_t num_args,
 int write_jump(uint8_t opcode, FILE* output, char** args, size_t num_args, 
     uint32_t addr, SymbolTable* reltbl) {
 	if (num_args == 1) {
-        char *target_address = args[0];
+        char *target_label = args[0];
         /*  We can use the same data structure of symbol table. j and jal instructions in out file 
             don't contain the details of target address. The linker will do it with the relocation
             table!
         */
-        add_to_table(reltbl, target_address, addr);
+        add_to_table(reltbl, target_label, addr);
         uint32_t instruction = opcode << 26;
         write_inst_hex(output, instruction);
         return 0;
